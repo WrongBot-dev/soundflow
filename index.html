@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SoundFlow - Music Player</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        body { background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%); }
+
+        .glass {
+            background: rgba(255,255,255,0.05);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .glass-dark {
+            background: rgba(0,0,0,0.3);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .gradient-text {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .gradient-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .gradient-btn:hover {
+            background: linear-gradient(135deg, #764ba2 0%, #f093fb 100%);
+            transform: scale(1.05);
+        }
+
+        .song-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 20px 40px rgba(102,126,234,0.3);
+        }
+
+        .nav-item:hover, .nav-item.active {
+            background: linear-gradient(90deg, rgba(102,126,234,0.2) 0%, transparent 100%);
+            border-left: 3px solid #667eea;
+        }
+
+        .progress-bar {
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+        }
+
+        .equalizer-bar {
+            animation: equalizer 0.5s ease-in-out infinite alternate;
+        }
+
+        @keyframes equalizer {
+            from { height: 8px; }
+            to { height: 24px; }
+        }
+
+        .pulse-ring {
+            animation: pulse-ring 2s cubic-bezier(0.455, 0.03, 0.515, 0.955) infinite;
+        }
+
+        @keyframes pulse-ring {
+            0% { transform: scale(0.8); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.5; }
+            100% { transform: scale(0.8); opacity: 1; }
+        }
+
+        .vinyl-spin {
+            animation: spin 3s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .vinyl-spin.paused { animation-play-state: paused; }
+
+        .mood-card:hover {
+            transform: scale(1.08);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.4);
+        }
+
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+        .notification-badge {
+            animation: bounce 1s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-3px); }
+        }
+
+        .waveform-bar {
+            animation: wave 1.2s ease-in-out infinite;
+        }
+
+        @keyframes wave {
+            0%, 100% { transform: scaleY(0.5); }
+            50% { transform: scaleY(1); }
+        }
+
+        .lyrics-line { transition: all 0.3s ease; }
+        .lyrics-line.active {
+            color: #f093fb;
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body class="min-h-screen text-white overflow-hidden">
+    <div class="flex h-screen">
+        <!-- Sidebar -->
+        <aside class="w-64 glass-dark flex flex-col p-4 space-y-6">
+            <!-- Logo -->
+            <div class="flex items-center space-x-3 px-4 py-2">
+                <div class="w-10 h-10 gradient-btn rounded-xl flex items-center justify-center">
+                    <i class="fas fa-wave-square text-xl"></i>
+                </div>
+                <span class="text-2xl font-bold gradient-text">SoundFlow</span>
+            </div>
+
+            <!-- Main Navigation -->
+            <nav class="flex-1 space-y-1">
+                <div class="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">Menu</div>
+                <a href="#" class="nav-item active flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-300" onclick="showSection('home')">
+                    <i class="fas fa-home w-5"></i>
+                    <span>Home</span>
+                </a>
+                <a href="#" class="nav-item flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-300" onclick="showSection('discover')">
+                    <i class="fas fa-compass w-5"></i>
+                    <span>Discover</span>
+                </a>
+                <a href="#" class="nav-item flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-300" onclick="showSection('trending')">
+                    <i class="fas fa-chart-line w-5"></i>
+                    <span>Trending</span>
+                    <span class="ml-auto bg-red-500 text-xs px-2 py-0.5 rounded-full notification-badge">Live</span>
+                </a>
+                <a href="#" class="nav-item flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-300" onclick="showSection('flow')">
+                    <i class="fas fa-robot w-5"></i>
+                    <span>Flow Mode</span>
+                    <span class="ml-auto text-purple-400"><i class="fas fa-sparkles"></i></span>
+                </a>
+
+                <div class="px-4 py-2 mt-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Library</div>
+                <a href="#" class="nav-item flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-300" onclick="showSection('playlists')">
+                    <i class="fas fa-list-music w-5"></i>
+                    <span>Playlists</span>
+                </a>
+                <a href="#" class="nav-item flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-300" onclick="showSection('liked')">
+                    <i class="fas fa-heart w-5"></i>
+                    <span>Liked Songs</span>
+                </a>
+                <a href="#" class="nav-item flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-300" onclick="showSection('offline')">
+                    <i class="fas fa-download w-5"></i>
+                    <span>Offline</span>
+                </a>
+            </nav>
+
+            <!-- Premium Upsell -->
+            <div class="glass rounded-2xl p-4 space-y-3">
+                <div class="flex items-center space-x-2">
+                    <i class="fas fa-crown text-yellow-400"></i>
+                    <span class="font-semibold">Go Premium</span>
+                </div>
+                <p class="text-xs text-gray-400">Unlock offline mode, hi-fi audio & unlimited skips</p>
+                <button class="w-full gradient-btn text-sm font-semibold py-2 rounded-xl transition-all duration-300">
+                    Upgrade Now
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 overflow-y-auto scrollbar-hide pb-32">
+            <!-- Header -->
+            <header class="sticky top-0 z-10 glass-dark px-8 py-4 flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <button class="p-2 hover:bg-white/10 rounded-full transition"><i class="fas fa-chevron-left"></i></button>
+                    <button class="p-2 hover:bg-white/10 rounded-full transition"><i class="fas fa-chevron-right"></i></button>
+                    <div class="relative">
+                        <input type="text" placeholder="Search songs, artists, albums..."
+                               class="w-80 bg-white/10 border border-white/10 rounded-full px-5 py-2.5 pl-12 focus:outline-none focus:border-purple-500 transition">
+                        <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button class="p-2 hover:bg-white/10 rounded-full transition relative">
+                        <i class="fas fa-bell"></i>
+                        <span class="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
+                    </button>
+                    <button class="flex items-center space-x-2 glass px-4 py-2 rounded-full hover:bg-white/10 transition">
+                        <img src="https://i.pravatar.cc/32?img=3" class="w-8 h-8 rounded-full">
+                        <span class="font-medium">Alex</span>
+                        <i class="fas fa-chevron-down text-xs"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Content Sections -->
+            <div id="home-section" class="section px-8 py-6 space-y-8">
+                <!-- Hero Banner -->
+                <div class="relative overflow-hidden rounded-3xl bg-gradient-to-r from-purple-900 via-indigo-800 to-pink-800 p-8">
+                    <div class="absolute inset-0 opacity-20">
+                        <div class="absolute w-96 h-96 bg-purple-500 rounded-full blur-3xl -top-20 -left-20"></div>
+                        <div class="absolute w-96 h-96 bg-pink-500 rounded-full blur-3xl -bottom-20 -right-20"></div>
+                    </div>
+                    <div class="relative z-10 flex items-center justify-between">
+                        <div class="space-y-4 max-w-lg">
+                            <span class="bg-white/20 px-3 py-1 rounded-full text-sm font-medium">
+                                <i class="fas fa-fire text-orange-400 mr-1"></i> New Music Friday
+                            </span>
+                            <h1 class="text-4xl font-bold">Your Weekly Personalized Mix</h1>
+                            <p class="text-gray-300">Fresh releases from your favorite artists, curated just for you by our AI</p>
+                            <div class="flex space-x-4">
+                                <button class="gradient-btn px-8 py-3 rounded-full font-semibold flex items-center space-x-2 transition-all duration-300">
+                                    <i class="fas fa-play"></i>
+                                    <span>Play All</span>
+                                </button>
+                                <button class="glass px-6 py-3 rounded-full font-medium hover:bg-white/20 transition">
+                                    <i class="fas fa-random mr-2"></i> Shuffle
+                                </button>
+                            </div>
+                        </div>
+                        <div class="relative">
+                            <div class="w-48 h-48 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 p-1 vinyl-spin" id="vinyl">
+                                <div class="w-full h-full rounded-full bg-gray-900 flex items-center justify-center">
+                                    <div class="w-16 h-16 rounded-full bg-gradient-to-br from-purple-500 to-pink-500"></div>
+                                </div>
+                            </div>
+                            <div class="absolute -inset-4 rounded-full border-2 border-purple-500/30 pulse-ring"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mood Selection -->
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-2xl font-bold">What's Your Mood?</h2>
+                        <span class="text-purple-400 text-sm"><i class="fas fa-brain mr-1"></i> AI-Powered</span>
+                    </div>
+                    <div class="grid grid-cols-4 gap-4">
+                        <div class="mood-card glass rounded-2xl p-6 cursor-pointer transition-all duration-300 hover:border-green-400" onclick="setMood('chill')">
+                            <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-green-400 to-teal-500 flex items-center justify-center mb-4">
+                                <i class="fas fa-leaf text-2xl"></i>
+                            </div>
+                            <h3 class="font-semibold text-lg">Chill</h3>
+                            <p class="text-sm text-gray-400">Relax & unwind</p>
+                        </div>
+                        <div class="mood-card glass rounded-2xl p-6 cursor-pointer transition-all duration-300 hover:border-orange-400" onclick="setMood('workout')">
+                            <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center mb-4">
+                                <i class="fas fa-dumbbell text-2xl"></i>
+                            </div>
+                            <h3 class="font-semibold text-lg">Workout</h3>
+                            <p class="text-sm text-gray-400">High energy beats</p>
+                        </div>
+                        <div class="mood-card glass rounded-2xl p-6 cursor-pointer transition-all duration-300 hover:border-blue-400" onclick="setMood('focus')">
+                            <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center mb-4">
+                                <i class="fas fa-brain text-2xl"></i>
+                            </div>
+                            <h3 class="font-semibold text-lg">Focus</h3>
+                            <p class="text-sm text-gray-400">Deep concentration</p>
+                        </div>
+                        <div class="mood-card glass rounded-2xl p-6 cursor-pointer transition-all duration-300 hover:border-pink-400" onclick="setMood('party')">
+                            <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-pink-400 to-purple-500 flex items-center justify-center mb-4">
+                                <i class="fas fa-champagne-glasses text-2xl"></i>
+                            </div>
+                            <h3 class="font-semibold text-lg">Party</h3>
+                            <p class="text-sm text-gray-400">Dance all night</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recently Played -->
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-2xl font-bold">Recently Played</h2>
+                        <a href="#" class="text-purple-400 hover:underline text-sm">See All</a>
+                    </div>
+                    <div class="grid grid-cols-5 gap-4" id="recently-played">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Made For You -->
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-2xl font-bold">Made For You</h2>
+                        <a href="#" class="text-purple-400 hover:underline text-sm">See All</a>
+                    </div>
+                    <div class="grid grid-cols-5 gap-4" id="made-for-you">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Genre Pulse -->
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-2xl font-bold">Genre Pulse</h2>
+                        <div class="flex space-x-2">
+                            <button class="genre-btn active px-4 py-1.5 rounded-full text-sm glass transition" onclick="filterGenre('all')">All</button>
+                            <button class="genre-btn px-4 py-1.5 rounded-full text-sm glass transition" onclick="filterGenre('hiphop')">Hip-Hop</button>
+                            <button class="genre-btn px-4 py-1.5 rounded-full text-sm glass transition" onclick="filterGenre('pop')">Pop</button>
+                            <button class="genre-btn px-4 py-1.5 rounded-full text-sm glass transition" onclick="filterGenre('indie')">Indie</button>
+                            <button class="genre-btn px-4 py-1.5 rounded-full text-sm glass transition" onclick="filterGenre('electronic')">Electronic</button>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-5 gap-4" id="genre-pulse">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Flow Mode Section -->
+            <div id="flow-section" class="section hidden px-8 py-6">
+                <div class="text-center space-y-8 py-12">
+                    <div class="relative inline-block">
+                        <div class="w-48 h-48 rounded-full bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400 p-1 mx-auto">
+                            <div class="w-full h-full rounded-full bg-gray-900 flex items-center justify-center">
+                                <i class="fas fa-infinity text-6xl gradient-text"></i>
+                            </div>
+                        </div>
+                        <div class="absolute -inset-8 rounded-full border border-purple-500/20 pulse-ring"></div>
+                        <div class="absolute -inset-16 rounded-full border border-pink-500/10 pulse-ring" style="animation-delay: 0.5s"></div>
+                    </div>
+                    <div class="space-y-4">
+                        <h1 class="text-4xl font-bold">Flow Mode</h1>
+                        <p class="text-gray-400 max-w-md mx-auto">Endless personalized radio that adapts in real-time to your taste, mood, and the time of day</p>
+                    </div>
+                    <div class="flex justify-center space-x-4">
+                        <button class="gradient-btn px-12 py-4 rounded-full font-semibold text-lg flex items-center space-x-3 transition-all duration-300" onclick="startFlow()">
+                            <i class="fas fa-play"></i>
+                            <span>Start Flow</span>
+                        </button>
+                    </div>
+                    <div class="glass rounded-2xl p-6 max-w-2xl mx-auto mt-12">
+                        <h3 class="font-semibold mb-4">How Flow Mode Works</h3>
+                        <div class="grid grid-cols-3 gap-6 text-center">
+                            <div>
+                                <div class="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center mx-auto mb-3">
+                                    <i class="fas fa-chart-pie text-purple-400"></i>
+                                </div>
+                                <p class="text-sm text-gray-400">Analyzes your listening history</p>
+                            </div>
+                            <div>
+                                <div class="w-12 h-12 rounded-full bg-pink-500/20 flex items-center justify-center mx-auto mb-3">
+                                    <i class="fas fa-clock text-pink-400"></i>
+                                </div>
+                                <p class="text-sm text-gray-400">Adapts to time of day</p>
+                            </div>
+                            <div>
+                                <div class="w-12 h-12 rounded-full bg-orange-500/20 flex items-center justify-center mx-auto mb-3">
+                                    <i class="fas fa-heart text-orange-400"></i>
+                                </div>
+                                <p class="text-sm text-gray-400">Learns from your reactions</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Trending Section -->
+            <div id="trending-section" class="section hidden px-8 py-6 space-y-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h1 class="text-3xl font-bold">Trending Now</h1>
+                        <p class="text-gray-400">Updated hourly • Real-time charts</p>
+                    </div>
+                    <div class="flex items-center space-x-2 text-green-400">
+                        <span class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+                        <span class="text-sm font-medium">Live</span>
+                    </div>
+                </div>
+                <div class="glass rounded-2xl overflow-hidden">
+                    <table class="w-full">
+                        <thead class="border-b border-white/10">
+                            <tr class="text-gray-400 text-sm">
+                                <th class="text-left py-4 px-6 w-12">#</th>
+                                <th class="text-left py-4 px-6">Title</th>
+                                <th class="text-left py-4 px-6">Artist</th>
+                                <th class="text-left py-4 px-6">Album</th>
+                                <th class="text-left py-4 px-6 w-20"><i class="fas fa-chart-line"></i></th>
+                                <th class="text-right py-4 px-6 w-24"><i class="fas fa-clock"></i></th>
+                            </tr>
+                        </thead>
+                        <tbody id="trending-table">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Playlists Section -->
+            <div id="playlists-section" class="section hidden px-8 py-6 space-y-6">
+                <div class="flex items-center justify-between">
+                    <h1 class="text-3xl font-bold">Your Playlists</h1>
+                    <button class="gradient-btn px-6 py-2.5 rounded-full font-medium flex items-center space-x-2 transition-all duration-300">
+                        <i class="fas fa-plus"></i>
+                        <span>Create Playlist</span>
+                    </button>
+                </div>
+                <div class="grid grid-cols-4 gap-6" id="playlists-grid">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+
+            <!-- Lyrics Modal -->
+            <div id="lyrics-modal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-xl flex items-center justify-center">
+                <div class="glass rounded-3xl p-8 max-w-2xl w-full mx-4 max-h-[80vh] overflow-hidden">
+                    <div class="flex items-center justify-between mb-6">
+                        <div class="flex items-center space-x-4">
+                            <img id="lyrics-cover" src="" class="w-16 h-16 rounded-xl object-cover">
+                            <div>
+                                <h3 id="lyrics-title" class="font-bold text-xl"></h3>
+                                <p id="lyrics-artist" class="text-gray-400"></p>
+                            </div>
+                        </div>
+                        <button onclick="closeLyrics()" class="p-2 hover:bg-white/10 rounded-full transition">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+                    <div id="lyrics-content" class="space-y-4 overflow-y-auto max-h-96 scrollbar-hide text-center">
+                        <!-- Lyrics populated by JS -->
+                    </div>
+                    <div class="mt-6 flex justify-center">
+                        <button class="glass px-6 py-2 rounded-full text-sm flex items-center space-x-2 hover:bg-white/10 transition">
+                            <i class="fas fa-microphone"></i>
+                            <span>Karaoke Mode</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Now Playing Bar -->
+    <div class="fixed bottom-0 left-0 right-0 glass-dark border-t border-white/10 px-6 py-3 z-40">
+        <div class="flex items-center justify-between max-w-full">
+            <!-- Current Track -->
+            <div class="flex items-center space-x-4 w-1/4">
+                <img id="current-cover" src="https://picsum.photos/seed/song1/60/60" class="w-14 h-14 rounded-lg object-cover shadow-lg">
+                <div class="min-w-0">
+                    <h4 id="current-title" class="font-medium truncate">Midnight Dreams</h4>
+                    <p id="current-artist" class="text-sm text-gray-400 truncate">Luna Wave</p>
+                </div>
+                <button class="text-gray-400 hover:text-pink-500 transition" onclick="toggleLike()">
+                    <i id="like-btn" class="far fa-heart text-xl"></i>
+                </button>
+            </div>
+
+            <!-- Player Controls -->
+            <div class="flex flex-col items-center w-2/4">
+                <div class="flex items-center space-x-6">
+                    <button class="text-gray-400 hover:text-white transition">
+                        <i class="fas fa-shuffle"></i>
+                    </button>
+                    <button class="text-gray-400 hover:text-white transition" onclick="prevTrack()">
+                        <i class="fas fa-backward-step text-xl"></i>
+                    </button>
+                    <button id="play-btn" class="w-12 h-12 gradient-btn rounded-full flex items-center justify-center hover:scale-110 transition-all duration-300" onclick="togglePlay()">
+                        <i class="fas fa-play text-lg ml-0.5"></i>
+                    </button>
+                    <button class="text-gray-400 hover:text-white transition" onclick="nextTrack()">
+                        <i class="fas fa-forward-step text-xl"></i>
+                    </button>
+                    <button class="text-gray-400 hover:text-white transition">
+                        <i class="fas fa-repeat"></i>
+                    </button>
+                </div>
+                <div class="flex items-center space-x-3 w-full mt-2">
+                    <span id="current-time" class="text-xs text-gray-400 w-10 text-right">0:00</span>
+                    <div class="flex-1 h-1.5 bg-white/10 rounded-full cursor-pointer group relative" onclick="seekTrack(event)">
+                        <div id="progress" class="h-full progress-bar rounded-full transition-all duration-100" style="width: 35%"></div>
+                        <div class="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition" style="left: 35%"></div>
+                    </div>
+                    <span id="duration" class="text-xs text-gray-400 w-10">3:42</span>
+                </div>
+            </div>
+
+            <!-- Extra Controls -->
+            <div class="flex items-center space-x-4 w-1/4 justify-end">
+                <button class="text-gray-400 hover:text-white transition" onclick="showLyrics()">
+                    <i class="fas fa-microphone-lines"></i>
+                </button>
+                <button class="text-gray-400 hover:text-white transition">
+                    <i class="fas fa-list"></i>
+                </button>
+                <button class="text-gray-400 hover:text-white transition">
+                    <i class="fas fa-desktop"></i>
+                </button>
+                <div class="flex items-center space-x-2">
+                    <i class="fas fa-volume-high text-gray-400"></i>
+                    <div class="w-24 h-1.5 bg-white/10 rounded-full cursor-pointer">
+                        <div class="h-full bg-white rounded-full" style="width: 70%"></div>
+                    </div>
+                </div>
+                <button class="text-gray-400 hover:text-white transition">
+                    <i class="fas fa-expand"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Sample Data
+        const songs = [
+            { id: 1, title: "Midnight Dreams", artist: "Luna Wave", album: "Nocturnal", cover: "https://picsum.photos/seed/song1/300/300", duration: "3:42", genre: "pop", trend: "up" },
+            { id: 2, title: "Electric Soul", artist: "Neon Pulse", album: "Digital Hearts", cover: "https://picsum.photos/seed/song2/300/300", duration: "4:15", genre: "electronic", trend: "up" },
+            { id: 3, title: "Summer Vibes", artist: "Beach House", album: "Golden Hour", cover: "https://picsum.photos/seed/song3/300/300", duration: "3:28", genre: "indie", trend: "same" },
+            { id: 4, title: "Urban Jungle", artist: "Metro Kings", album: "City Lights", cover: "https://picsum.photos/seed/song4/300/300", duration: "3:55", genre: "hiphop", trend: "up" },
+            { id: 5, title: "Starlight", artist: "Cosmos", album: "Infinity", cover: "https://picsum.photos/seed/song5/300/300", duration: "4:02", genre: "pop", trend: "down" },
+            { id: 6, title: "Rhythm & Flow", artist: "Beat Master", album: "Grooves", cover: "https://picsum.photos/seed/song6/300/300", duration: "3:33", genre: "hiphop", trend: "up" },
+            { id: 7, title: "Crystal Clear", artist: "Glass Ocean", album: "Depths", cover: "https://picsum.photos/seed/song7/300/300", duration: "5:12", genre: "electronic", trend: "up" },
+            { id: 8, title: "Wanderlust", artist: "Nomad", album: "Journeys", cover: "https://picsum.photos/seed/song8/300/300", duration: "4:45", genre: "indie", trend: "same" },
+            { id: 9, title: "Neon Nights", artist: "Synthwave", album: "Retro Future", cover: "https://picsum.photos/seed/song9/300/300", duration: "3:58", genre: "electronic", trend: "up" },
+            { id: 10, title: "Golden", artist: "Sunrise", album: "New Day", cover: "https://picsum.photos/seed/song10/300/300", duration: "3:22", genre: "pop", trend: "up" }
+        ];
+
+        const playlists = [
+            { id: 1, name: "Daily Mix 1", songs: 45, cover: "https://picsum.photos/seed/playlist1/300/300", collaborative: false },
+            { id: 2, name: "Chill Vibes", songs: 32, cover: "https://picsum.photos/seed/playlist2/300/300", collaborative: false },
+            { id: 3, name: "Workout Beast", songs: 28, cover: "https://picsum.photos/seed/playlist3/300/300", collaborative: false },
+            { id: 4, name: "Focus Flow", songs: 50, cover: "https://picsum.photos/seed/playlist4/300/300", collaborative: true },
+            { id: 5, name: "Party Anthems", songs: 65, cover: "https://picsum.photos/seed/playlist5/300/300", collaborative: false },
+            { id: 6, name: "Throwback Hits", songs: 40, cover: "https://picsum.photos/seed/playlist6/300/300", collaborative: false },
+            { id: 7, name: "Indie Discoveries", songs: 35, cover: "https://picsum.photos/seed/playlist7/300/300", collaborative: true },
+            { id: 8, name: "Late Night Jazz", songs: 22, cover: "https://picsum.photos/seed/playlist8/300/300", collaborative: false }
+        ];
+
+        const lyrics = [
+            "In the midnight hour",
+            "When the stars align",
+            "I find myself dreaming",
+            "Of a love so divine",
+            "",
+            "Through the darkness we flow",
+            "Like rivers to the sea",
+            "Every heartbeat echoes",
+            "What you mean to me",
+            "",
+            "Midnight dreams, they carry us away",
+            "To a place where we can stay",
+            "In this moment, we are free",
+            "Just you and me, eternally",
+            "",
+            "The city lights are fading",
+            "As the morning draws near",
+            "But in my heart you're staying",
+            "Forever, my dear"
+        ];
+
+        let isPlaying = false;
+        let currentSong = songs[0];
+        let isLiked = false;
+        let progress = 35;
+
+        // Initialize
+        function init() {
+            renderRecentlyPlayed();
+            renderMadeForYou();
+            renderGenrePulse();
+            renderTrending();
+            renderPlaylists();
+            startProgressSimulation();
+        }
+
+        function renderSongCard(song) {
+            return `
+                <div class="song-card glass rounded-2xl p-4 cursor-pointer transition-all duration-300" onclick="playSong(${song.id})">
+                    <div class="relative group">
+                        <img src="${song.cover}" class="w-full aspect-square rounded-xl object-cover mb-3">
+                        <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all duration-300 rounded-xl flex items-center justify-center">
+                            <button class="w-12 h-12 gradient-btn rounded-full flex items-center justify-center transform scale-0 group-hover:scale-100 transition-all duration-300">
+                                <i class="fas fa-play text-lg ml-0.5"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <h3 class="font-semibold truncate">${song.title}</h3>
+                    <p class="text-sm text-gray-400 truncate">${song.artist}</p>
+                </div>
+            `;
+        }
+
+        function renderRecentlyPlayed() {
+            const container = document.getElementById('recently-played');
+            container.innerHTML = songs.slice(0, 5).map(renderSongCard).join('');
+        }
+
+        function renderMadeForYou() {
+            const container = document.getElementById('made-for-you');
+            container.innerHTML = songs.slice(5, 10).map(renderSongCard).join('');
+        }
+
+        function renderGenrePulse(genre = 'all') {
+            const container = document.getElementById('genre-pulse');
+            const filtered = genre === 'all' ? songs : songs.filter(s => s.genre === genre);
+            container.innerHTML = filtered.slice(0, 5).map(renderSongCard).join('');
+        }
+
+        function renderTrending() {
+            const container = document.getElementById('trending-table');
+            container.innerHTML = songs.map((song, index) => `
+                <tr class="hover:bg-white/5 transition cursor-pointer" onclick="playSong(${song.id})">
+                    <td class="py-4 px-6 text-gray-400">${index + 1}</td>
+                    <td class="py-4 px-6">
+                        <div class="flex items-center space-x-3">
+                            <img src="${song.cover}" class="w-10 h-10 rounded object-cover">
+                            <span class="font-medium">${song.title}</span>
+                        </div>
+                    </td>
+                    <td class="py-4 px-6 text-gray-400">${song.artist}</td>
+                    <td class="py-4 px-6 text-gray-400">${song.album}</td>
+                    <td class="py-4 px-6">
+                        <i class="fas fa-arrow-${song.trend === 'up' ? 'up text-green-400' : song.trend === 'down' ? 'down text-red-400' : 'right text-gray-400'}"></i>
+                    </td>
+                    <td class="py-4 px-6 text-right text-gray-400">${song.duration}</td>
+                </tr>
+            `).join('');
+        }
+
+        function renderPlaylists() {
+            const container = document.getElementById('playlists-grid');
+            container.innerHTML = playlists.map(playlist => `
+                <div class="song-card glass rounded-2xl p-4 cursor-pointer transition-all duration-300">
+                    <div class="relative group">
+                        <img src="${playlist.cover}" class="w-full aspect-square rounded-xl object-cover mb-3">
+                        <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all duration-300 rounded-xl flex items-center justify-center">
+                            <button class="w-12 h-12 gradient-btn rounded-full flex items-center justify-center transform scale-0 group-hover:scale-100 transition-all duration-300">
+                                <i class="fas fa-play text-lg ml-0.5"></i>
+                            </button>
+                        </div>
+                        ${playlist.collaborative ? '<div class="absolute top-2 right-2 bg-purple-500 px-2 py-1 rounded-full text-xs"><i class="fas fa-users mr-1"></i>Collab</div>' : ''}
+                    </div>
+                    <h3 class="font-semibold truncate">${playlist.name}</h3>
+                    <p class="text-sm text-gray-400">${playlist.songs} songs</p>
+                </div>
+            `).join('');
+        }
+
+        function showSection(section) {
+            document.querySelectorAll('.section').forEach(s => s.classList.add('hidden'));
+            document.getElementById(section + '-section').classList.remove('hidden');
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+        }
+
+        function filterGenre(genre) {
+            document.querySelectorAll('.genre-btn').forEach(btn => btn.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+            renderGenrePulse(genre);
+        }
+
+        function playSong(id) {
+            const song = songs.find(s => s.id === id);
+            if (song) {
+                currentSong = song;
+                document.getElementById('current-cover').src = song.cover;
+                document.getElementById('current-title').textContent = song.title;
+                document.getElementById('current-artist').textContent = song.artist;
+                isPlaying = true;
+                updatePlayButton();
+                progress = 0;
+            }
+        }
+
+        function togglePlay() {
+            isPlaying = !isPlaying;
+            updatePlayButton();
+        }
+
+        function updatePlayButton() {
+            const btn = document.getElementById('play-btn');
+            const vinyl = document.getElementById('vinyl');
+            if (isPlaying) {
+                btn.innerHTML = '<i class="fas fa-pause text-lg"></i>';
+                vinyl?.classList.remove('paused');
+            } else {
+                btn.innerHTML = '<i class="fas fa-play text-lg ml-0.5"></i>';
+                vinyl?.classList.add('paused');
+            }
+        }
+
+        function nextTrack() {
+            const currentIndex = songs.findIndex(s => s.id === currentSong.id);
+            const nextIndex = (currentIndex + 1) % songs.length;
+            playSong(songs[nextIndex].id);
+        }
+
+        function prevTrack() {
+            const currentIndex = songs.findIndex(s => s.id === currentSong.id);
+            const prevIndex = (currentIndex - 1 + songs.length) % songs.length;
+            playSong(songs[prevIndex].id);
+        }
+
+        function toggleLike() {
+            isLiked = !isLiked;
+            const btn = document.getElementById('like-btn');
+            btn.className = isLiked ? 'fas fa-heart text-xl text-pink-500' : 'far fa-heart text-xl';
+        }
+
+        function seekTrack(e) {
+            const bar = e.currentTarget;
+            const rect = bar.getBoundingClientRect();
+            const percent = ((e.clientX - rect.left) / rect.width) * 100;
+            progress = Math.max(0, Math.min(100, percent));
+            document.getElementById('progress').style.width = progress + '%';
+        }
+
+        function startProgressSimulation() {
+            setInterval(() => {
+                if (isPlaying && progress < 100) {
+                    progress += 0.1;
+                    document.getElementById('progress').style.width = progress + '%';
+
+                    const totalSeconds = 222; // 3:42
+                    const currentSeconds = Math.floor((progress / 100) * totalSeconds);
+                    const minutes = Math.floor(currentSeconds / 60);
+                    const seconds = currentSeconds % 60;
+                    document.getElementById('current-time').textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+                    if (progress >= 100) {
+                        nextTrack();
+                    }
+                }
+            }, 100);
+        }
+
+        function setMood(mood) {
+            const colors = {
+                chill: 'from-green-400 to-teal-500',
+                workout: 'from-orange-400 to-red-500',
+                focus: 'from-blue-400 to-indigo-500',
+                party: 'from-pink-400 to-purple-500'
+            };
+            document.querySelectorAll('.mood-card').forEach(card => {
+                card.style.borderColor = 'transparent';
+            });
+            event.currentTarget.style.borderColor = '#667eea';
+        }
+
+        function startFlow() {
+            playSong(songs[Math.floor(Math.random() * songs.length)].id);
+        }
+
+        function showLyrics() {
+            document.getElementById('lyrics-modal').classList.remove('hidden');
+            document.getElementById('lyrics-cover').src = currentSong.cover;
+            document.getElementById('lyrics-title').textContent = currentSong.title;
+            document.getElementById('lyrics-artist').textContent = currentSong.artist;
+
+            const content = document.getElementById('lyrics-content');
+            content.innerHTML = lyrics.map((line, i) =>
+                `<p class="lyrics-line ${i === 0 ? 'active' : ''} text-gray-300 transition-all duration-300">${line || '&nbsp;'}</p>`
+            ).join('');
+        }
+
+        function closeLyrics() {
+            document.getElementById('lyrics-modal').classList.add('hidden');
+        }
+
+        // Initialize app
+        init();
+    </script>
+</body>
+</html>
